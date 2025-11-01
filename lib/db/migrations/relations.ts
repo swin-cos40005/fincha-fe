@@ -1,0 +1,132 @@
+import { relations } from "drizzle-orm/relations";
+import { chat, workflow, dashboardItem, user, report, templateCategory, workflowTemplate, messageV2, message, stream, document, suggestion, voteV2, vote, dashboard } from "./schema";
+
+export const workflowRelations = relations(workflow, ({one}) => ({
+	chat: one(chat, {
+		fields: [workflow.chatId],
+		references: [chat.id]
+	}),
+}));
+
+export const chatRelations = relations(chat, ({one, many}) => ({
+	workflows: many(workflow),
+	dashboardItems: many(dashboardItem),
+	user: one(user, {
+		fields: [chat.userId],
+		references: [user.id]
+	}),
+	reports: many(report),
+	messageV2s: many(messageV2),
+	messages: many(message),
+	streams: many(stream),
+	voteV2s: many(voteV2),
+	votes: many(vote),
+}));
+
+export const dashboardItemRelations = relations(dashboardItem, ({one}) => ({
+	chat: one(chat, {
+		fields: [dashboardItem.chatId],
+		references: [chat.id]
+	}),
+}));
+
+export const userRelations = relations(user, ({many}) => ({
+	chats: many(chat),
+	workflowTemplates: many(workflowTemplate),
+	suggestions: many(suggestion),
+	dashboards: many(dashboard),
+	documents: many(document),
+}));
+
+export const reportRelations = relations(report, ({one}) => ({
+	chat: one(chat, {
+		fields: [report.chatId],
+		references: [chat.id]
+	}),
+}));
+
+export const workflowTemplateRelations = relations(workflowTemplate, ({one}) => ({
+	templateCategory: one(templateCategory, {
+		fields: [workflowTemplate.categoryId],
+		references: [templateCategory.id]
+	}),
+	user: one(user, {
+		fields: [workflowTemplate.userId],
+		references: [user.id]
+	}),
+}));
+
+export const templateCategoryRelations = relations(templateCategory, ({many}) => ({
+	workflowTemplates: many(workflowTemplate),
+}));
+
+export const messageV2Relations = relations(messageV2, ({one, many}) => ({
+	chat: one(chat, {
+		fields: [messageV2.chatId],
+		references: [chat.id]
+	}),
+	voteV2s: many(voteV2),
+}));
+
+export const messageRelations = relations(message, ({one, many}) => ({
+	chat: one(chat, {
+		fields: [message.chatId],
+		references: [chat.id]
+	}),
+	votes: many(vote),
+}));
+
+export const streamRelations = relations(stream, ({one}) => ({
+	chat: one(chat, {
+		fields: [stream.chatId],
+		references: [chat.id]
+	}),
+}));
+
+export const suggestionRelations = relations(suggestion, ({one}) => ({
+	document: one(document, {
+		fields: [suggestion.documentId],
+		references: [document.id]
+	}),
+	user: one(user, {
+		fields: [suggestion.userId],
+		references: [user.id]
+	}),
+}));
+
+export const documentRelations = relations(document, ({one, many}) => ({
+	suggestions: many(suggestion),
+	user: one(user, {
+		fields: [document.userId],
+		references: [user.id]
+	}),
+}));
+
+export const voteV2Relations = relations(voteV2, ({one}) => ({
+	chat: one(chat, {
+		fields: [voteV2.chatId],
+		references: [chat.id]
+	}),
+	messageV2: one(messageV2, {
+		fields: [voteV2.messageId],
+		references: [messageV2.id]
+	}),
+}));
+
+export const voteRelations = relations(vote, ({one}) => ({
+	chat: one(chat, {
+		fields: [vote.chatId],
+		references: [chat.id]
+	}),
+	message: one(message, {
+		fields: [vote.messageId],
+		references: [message.id]
+	}),
+}));
+
+export const dashboardRelations = relations(dashboard, ({one}) => ({
+	user: one(user, {
+		fields: [dashboard.userId],
+		references: [user.id]
+	}),
+}));

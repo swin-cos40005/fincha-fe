@@ -1,9 +1,5 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-local.env
-*.env
-tsconfig.tsbuildinfo
-
 # dependencies
 node_modules
 .pnp
@@ -38,5 +34,12 @@ yarn-error.log*
 
 .env
 .vercel
-.vscode
 .env*.local
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/*
+
+/tsconfig.tsbuildinfo

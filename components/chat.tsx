@@ -1,96 +1,212 @@
-'use client'
+'use client';
 
-import { cn } from '@/lib/utils'
-import { ChatList } from '@/components/chat-list'
-import { ChatPanel } from '@/components/chat-panel'
-import { EmptyScreen } from '@/components/empty-screen'
-import { useLocalStorage } from '@/lib/hooks/use-local-storage'
-import { useEffect, useState } from 'react'
-import { useUIState, useAIState } from '@ai-sdk/rsc'
-import { Message, Session } from '@/lib/types'
-import { usePathname, useRouter } from 'next/navigation'
-import { useScrollAnchor } from '@/lib/hooks/use-scroll-anchor'
-import { toast } from 'sonner'
-import { TickerTape } from '@/components/tradingview/ticker-tape'
-import { MissingApiKeyBanner } from '@/components/missing-api-key-banner'
+import type { Attachment, UIMessage } from 'ai';
+import { useChat } from '@ai-sdk/react';
+import { useEffect, useState } from 'react';
+import useSWR, { useSWRConfig } from 'swr';
+import { ChatHeader } from '@/components/chat-header';
+import type { Vote } from '@/lib/db/schema';
+import { fetcher, fetchWithErrorHandlers, generateUUID } from '@/lib/utils';
+import { Artifact } from './artifact';
+import { MultimodalInput } from './multimodal-input';
+import { Messages } from './messages';
+import type { VisibilityType } from './visibility-selector';
+import { useArtifactSelector } from '@/hooks/use-artifact';
+import { unstable_serialize } from 'swr/infinite';
+import { getChatHistoryPaginationKey } from './sidebar-history';
+import { toast } from './toast';
+import type { Session } from 'next-auth';
+import { useSearchParams } from 'next/navigation';
+import { useChatVisibility } from '@/hooks/use-chat-visibility';
+import { useAutoResume } from '@/hooks/use-auto-resume';
+import { useApiKey } from '@/hooks/use-api-key';
+import { ChatSDKError } from '@/lib/errors';
+import { useArtifactStreamListener } from '@/hooks/use-active-artifacts';
 
-export interface ChatProps extends React.ComponentProps<'div'> {
-  initialMessages?: Message[]
-  id?: string
-  session?: Session
-  missingKeys: string[]
-}
+export function Chat({
+  id,
+  initialMessages,
+  initialChatModel,
+  initialVisibilityType,
+  isReadonly,
+  session,
+  autoResume,
+}: {
+  id: string;
+  initialMessages: Array<UIMessage>;
+  initialChatModel: string;
+  initialVisibilityType: VisibilityType;
+  isReadonly: boolean;
+  session: Session;
+  autoResume: boolean;
+}) {
+  const { mutate } = useSWRConfig();
+  const { visibilityType } = useChatVisibility({
+    chatId: id,
+    initialVisibilityType,
+  });
 
-export function Chat({ id, className, session, missingKeys }: ChatProps) {
-  const router = useRouter()
-  const path = usePathname()
-  const [input, setInput] = useState('')
-  const [messages] = useUIState()
-  const [aiState] = useAIState()
+  // Get custom API key if available
+  const { apiKey } = useApiKey();
 
-  const [_, setNewChatId] = useLocalStorage('newChatId', id)
+  // Initialize artifact stream listener for multiple artifacts
+  useArtifactStreamListener();
 
-  useEffect(() => {
-    if (session?.user) {
-      if (!path.includes('chat') && messages.length === 1) {
-        window.history.replaceState({}, '', `/chat/${id}`)
+  const {
+    messages,
+    setMessages,
+    handleSubmit,
+    input,
+    setInput,
+    append,
+    status,
+    stop,
+    reload,
+    experimental_resume,
+    data,
+  } = useChat({
+    id,
+    initialMessages,
+    experimental_throttle: 100,
+    sendExtraMessageFields: true,
+    generateId: generateUUID,
+    fetch: async (url, options = {}) => {
+      // If we have a custom API key, add it to the Authorization header
+      if (apiKey) {
+        // Ensure headers object exists
+        if (!options.headers) {
+          options.headers = {};
+        }
+
+        // If headers is a Headers instance, convert to plain object
+        if (options.headers instanceof Headers) {
+          const plainHeaders: Record<string, string> = {};
+          options.headers.forEach((value, key) => {
+            plainHeaders[key] = value;
+          });
+          options.headers = plainHeaders;
+        }
+
+        // Add Authorization header
+        options.headers = {
+          ...options.headers,
+          Authorization: `Bearer ${apiKey}`,
+        };
       }
+      return fetchWithErrorHandlers(url, options);
+    },
+    experimental_prepareRequestBody: (body) => ({
+      id,
+      message: body.messages.at(-1),
+      selectedChatModel: initialChatModel,
+      selectedVisibilityType: visibilityType,
+    }),
+    onFinish: () => {
+      mutate(unstable_serialize(getChatHistoryPaginationKey));
+    },
+    onError: (error) => {
+      if (error instanceof ChatSDKError) {
+        toast({
+          type: 'error',
+          description: error.message,
+        });
+      }
+    },
+  });
+
+  const searchParams = useSearchParams();
+  const query = searchParams.get('query');
+
+  const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
+
+  useEffect(() => {
+    if (query && !hasAppendedQuery) {
+      append({
+        role: 'user',
+        content: query,
+      });
+
+      setHasAppendedQuery(true);
+      window.history.replaceState({}, '', `/chat/${id}`);
     }
-  }, [id, path, session?.user, messages])
+  }, [query, append, hasAppendedQuery, id]);
 
-  useEffect(() => {
-    const messagesLength = aiState.messages?.length
-    if (messagesLength === 2) {
-      router.refresh()
-    }
-    console.log('Value: ', aiState.messages)
-  }, [aiState.messages, router])
+  const { data: votes } = useSWR<Array<Vote>>(
+    messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
+    fetcher,
+  );
 
-  useEffect(() => {
-    setNewChatId(id)
-  })
+  const [attachments, setAttachments] = useState<Array<Attachment>>([]);
+  const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
-  useEffect(() => {
-    missingKeys.map(key => {
-      toast.error(`Missing ${key} environment variable!`)
-    })
-  }, [missingKeys])
-
-  const { messagesRef, scrollRef, visibilityRef, isAtBottom, scrollToBottom } =
-    useScrollAnchor()
+  useAutoResume({
+    autoResume,
+    initialMessages,
+    experimental_resume,
+    data,
+    setMessages,
+  });
 
   return (
-    <div
-      className="group w-full overflow-auto pl-0 peer-[[data-state=open]]:lg:pl-[250px] peer-[[data-state=open]]:xl:pl-[300px]"
-      ref={scrollRef}
-    >
-      {messages.length ? (
-        <MissingApiKeyBanner missingKeys={missingKeys} />
-      ) : (
-        <></>
-      )}
+    <>
+      <div className="flex flex-col min-w-0 h-dvh bg-background">
+        <ChatHeader
+          chatId={id}
+          selectedModelId={initialChatModel}
+          selectedVisibilityType={initialVisibilityType}
+          isReadonly={isReadonly}
+          session={session}
+          append={append}
+          messages={messages}
+        />
 
-      <div
-        className={cn(
-          messages.length ? 'pb-[200px] pt-4 md:pt-6' : 'pb-[200px] pt-0',
-          className
-        )}
-        ref={messagesRef}
-      >
-        {messages.length ? (
-          <ChatList messages={messages} isShared={false} session={session} />
-        ) : (
-          <EmptyScreen />
-        )}
-        <div className="w-full h-px" ref={visibilityRef} />
+        <Messages
+          chatId={id}
+          status={status}
+          votes={votes}
+          messages={messages}
+          setMessages={setMessages}
+          reload={reload}
+          isReadonly={isReadonly}
+          isArtifactVisible={isArtifactVisible}
+        />
+
+        <form className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">
+          {!isReadonly && (
+            <MultimodalInput
+              chatId={id}
+              input={input}
+              setInput={setInput}
+              handleSubmit={handleSubmit}
+              status={status}
+              stop={stop}
+              attachments={attachments}
+              setAttachments={setAttachments}
+              messages={messages}
+              setMessages={setMessages}
+              append={append}
+            />
+          )}
+        </form>
       </div>
-      <ChatPanel
-        id={id}
+
+      <Artifact
+        chatId={id}
         input={input}
         setInput={setInput}
-        isAtBottom={isAtBottom}
-        scrollToBottom={scrollToBottom}
+        handleSubmit={handleSubmit}
+        status={status}
+        stop={stop}
+        attachments={attachments}
+        setAttachments={setAttachments}
+        append={append}
+        messages={messages}
+        setMessages={setMessages}
+        reload={reload}
+        votes={votes}
+        isReadonly={isReadonly}
+        selectedVisibilityType={visibilityType}
       />
-    </div>
-  )
+    </>
+  );
 }

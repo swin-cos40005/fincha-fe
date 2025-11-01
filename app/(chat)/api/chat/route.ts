@@ -1,0 +1,480 @@
+import {
+  appendClientMessage,
+  appendResponseMessages,
+  createDataStream,
+  smoothStream,
+  streamText,
+} from 'ai';
+import { auth, type UserType } from '@/app/(auth)/auth';
+import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
+import {
+  createStreamId,
+  deleteChatById,
+  getChatById,
+  getMessageCountByUserId,
+  getMessagesByChatId,
+  getStreamIdsByChatId,
+  saveChat,
+  saveMessages,
+  upsertWorkflowByConversationId,
+} from '@/lib/db/queries';
+import { generateUUID, getTrailingMessageId } from '@/lib/utils';
+import { generateTitleFromUserMessage } from '../../actions';
+import { createDocument } from '@/lib/ai/tools/create-document';
+import { updateDocument } from '@/lib/ai/tools/update-document';
+import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
+import { getWeather } from '@/lib/ai/tools/get-weather';
+import { captureChartScreenshot } from '@/lib/ai/tools/capture-chart-screenshot';
+import {
+  viewAvailableCategories,
+  viewAvailableNodes,
+  modifyWorkflow,
+  executeWorkflow,
+  readDashboardData,
+} from '@/lib/ai/tools/workflow-tools';
+
+import { isProductionEnvironment } from '@/lib/constants';
+import { myProvider, createProvider } from '@/lib/ai/providers';
+import { entitlementsByUserType } from '@/lib/ai/entitlements';
+import { postRequestBodySchema, type PostRequestBody } from './schema';
+import { geolocation } from '@vercel/functions';
+import {
+  createResumableStreamContext,
+  type ResumableStreamContext,
+} from 'resumable-stream';
+import { after } from 'next/server';
+import type { Chat } from '@/lib/db/schema';
+import { differenceInSeconds } from 'date-fns';
+import { ChatSDKError } from '@/lib/errors';
+
+export const maxDuration = 60;
+
+let globalStreamContext: ResumableStreamContext | null = null;
+
+function getStreamContext() {
+  if (!globalStreamContext) {
+    try {
+      globalStreamContext = createResumableStreamContext({
+        waitUntil: after,
+      });
+    } catch (error: any) {
+      if (error.message.includes('REDIS_URL')) {
+        // Resumable streams are disabled due to missing REDIS_URL
+      } else {
+        console.error(error);
+      }
+    }
+  }
+
+  return globalStreamContext;
+}
+
+export async function POST(request: Request) {
+  let requestBody: PostRequestBody;
+
+  try {
+    const json = await request.json();
+    requestBody = postRequestBodySchema.parse(json);
+  } catch {
+    return new ChatSDKError('bad_request:api').toResponse();
+  }
+  try {
+    const { id, message, selectedChatModel, selectedVisibilityType } =
+      requestBody;
+
+    const session = await auth();
+
+    if (!session?.user) {
+      return new ChatSDKError('unauthorized:chat').toResponse();
+    }
+
+    const userType: UserType = session.user.type;
+
+    let messageCount = 0;
+    try {
+      messageCount = await getMessageCountByUserId({
+        id: session.user.id,
+        differenceInHours: 24,
+      });
+    } catch (error) {
+      console.error('Failed to get message count:', error);
+      if (userType !== 'guest') {
+        return new ChatSDKError(
+          'bad_request:database',
+          'Unable to verify message quota. Please try again later.',
+        ).toResponse();
+      }
+    }
+
+    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
+      return new ChatSDKError('rate_limit:chat').toResponse();
+    }
+
+    const chat = await getChatById({ id });
+
+    if (!chat) {
+      try {
+        const title = await generateTitleFromUserMessage({
+          message,
+        });
+
+        await saveChat({
+          id,
+          userId: session.user.id,
+          title,
+          visibility: selectedVisibilityType,
+        }); // Create an empty workflow for the new conversation
+        await upsertWorkflowByConversationId({
+          title: `${title} Workflow`,
+          content: JSON.stringify({
+            nodes: [],
+            edges: [],
+            metadata: {
+              created: new Date().toISOString(),
+              description: 'Workflow for data processing and analysis',
+            },
+          }),
+          conversationId: id,
+        });
+      } catch (error) {
+        console.error('Failed to create new chat and workflow:', error);
+        return new ChatSDKError(
+          'bad_request:database',
+          'Failed to save chat',
+        ).toResponse();
+      }
+    } else {
+      if (chat.userId !== session.user.id) {
+        return new ChatSDKError('forbidden:chat').toResponse();
+      }
+    }
+    const previousMessages = await getMessagesByChatId({ id });
+
+    const messages = appendClientMessage({
+      // @ts-expect-error: todo add type conversion from DBMessage[] to UIMessage[]
+      messages: previousMessages,
+      message,
+    }).filter(msg => msg.role !== 'system'); // Filter out system messages
+    const { longitude, latitude, city, country } = geolocation(request);
+
+    const requestHints: RequestHints = {
+      longitude,
+      latitude,
+      city,
+      country,
+    };
+
+    // Extract CSV URLs from message attachments
+    const csvUrls: string[] = [];
+    if (message.experimental_attachments) {
+      for (const attachment of message.experimental_attachments) {
+        if (
+          attachment.contentType === 'text/csv' ||
+          attachment.name?.endsWith('.csv')
+        ) {
+          // The attachment should already have a URL if it was uploaded via the upload endpoint
+          if (attachment.url) {
+            csvUrls.push(attachment.url);
+          }
+        }
+      }
+    } // Also check previous messages for CSV URLs
+    for (const prevMessage of previousMessages) {
+      if (prevMessage.attachments && Array.isArray(prevMessage.attachments)) {
+        for (const attachment of prevMessage.attachments) {
+          if (
+            (attachment.contentType === 'text/csv' ||
+              attachment.name?.endsWith('.csv')) &&
+            attachment.url
+          ) {
+            csvUrls.push(attachment.url);
+          }
+        }
+      }
+    }
+
+    // Remove duplicates
+    const uniqueCsvUrls = [...new Set(csvUrls)];
+
+    try {
+      await saveMessages({
+        messages: [
+          {
+            chatId: id,
+            id: message.id,
+            role: 'user',
+            parts: message.parts,
+            attachments: message.experimental_attachments ?? [],
+            createdAt: new Date(),
+          },
+        ],
+      });
+    } catch (error) {
+      console.error('Failed to save user message:', error);
+      return new ChatSDKError(
+        'bad_request:database',
+        'Failed to save message',
+      ).toResponse();
+    }
+
+    const streamId = generateUUID();
+    try {
+      await createStreamId({ streamId, chatId: id });
+    } catch (error) {
+      console.error('Failed to create stream ID:', error);
+      return new ChatSDKError(
+        'bad_request:database',
+        'Failed to create stream',
+      ).toResponse();
+    }
+    const authHeader = request.headers.get('Authorization');
+    let customApiKey: string | undefined;
+
+    if (authHeader?.startsWith('Bearer ')) {
+      customApiKey = authHeader.substring(7);
+    }
+    const provider = customApiKey ? createProvider(customApiKey) : myProvider;
+    const stream = createDataStream({
+      execute: async (dataStream) => {
+        // Generate the system prompt with workflow context and CSV URLs
+        const generatedSystemPrompt = await systemPrompt({
+          selectedChatModel,
+          requestHints,
+          csvUrls: uniqueCsvUrls,
+          conversationId: id,
+          userId: session.user.id,
+        });
+
+        const result = streamText({
+          model: provider.languageModel(selectedChatModel),
+          system: generatedSystemPrompt,
+          messages: messages,
+          maxSteps: 200,
+          experimental_activeTools:
+            selectedChatModel === 'chat-model-reasoning'
+              ? []
+              : [
+                  'getWeather',
+                  'createDocument',
+                  'updateDocument',
+                  'requestSuggestions',
+                  'captureChartScreenshot',
+                  'viewAvailableCategories',
+                  'viewAvailableNodes',
+                  'modifyWorkflow',
+                  'executeWorkflow',
+                  'readDashboardData',
+                ],
+          experimental_transform: smoothStream({ chunking: 'word' }),
+          experimental_generateMessageId: generateUUID,
+          tools: {
+            getWeather,
+            createDocument: createDocument({ session, dataStream, chatId: id }),
+            updateDocument: updateDocument({ session, dataStream }),
+            requestSuggestions: requestSuggestions({ session, dataStream, }),
+            captureChartScreenshot: captureChartScreenshot(id),
+            viewAvailableCategories: viewAvailableCategories(),
+            viewAvailableNodes: viewAvailableNodes(),
+            modifyWorkflow: modifyWorkflow(session, dataStream, id),
+            executeWorkflow: executeWorkflow(session, dataStream, id),
+            readDashboardData: readDashboardData(session, id),
+          },
+          onFinish: async ({ response }) => {
+            if (session.user?.id) {
+              try {
+                const assistantId = getTrailingMessageId({
+                  messages: response.messages.filter(
+                    (message) => message.role === 'assistant',
+                  ),
+                });
+
+                if (!assistantId) {
+                  throw new Error('No assistant message found!');
+                }
+
+                const [, assistantMessage] = appendResponseMessages({
+                  messages: [message],
+                  responseMessages: response.messages,
+                });
+
+                await saveMessages({
+                  messages: [
+                    {
+                      id: assistantId,
+                      chatId: id,
+                      role: assistantMessage.role,
+                      parts: assistantMessage.parts,
+                      attachments:
+                        assistantMessage.experimental_attachments ?? [],
+                      createdAt: new Date(),
+                    },
+                  ],
+                });
+              } catch (error) {
+                console.error('Failed to save chat response:', error);
+              }
+            }
+          },
+          experimental_telemetry: {
+            isEnabled: isProductionEnvironment,
+            functionId: 'stream-text',
+          },
+        });
+
+        const originalConsumeStream = result.consumeStream.bind(result);
+        result.consumeStream = () => {
+          return originalConsumeStream();
+        };
+
+        result.consumeStream();
+
+        result.mergeIntoDataStream(dataStream, {
+          sendReasoning: true,
+        });
+      },
+      onError: (error) => {
+        console.error('DataStream error occurred:', error);
+        return 'Oops, an error occurred!';
+      },
+    });
+
+    const streamContext = getStreamContext();
+
+    if (streamContext) {
+      return new Response(
+        await streamContext.resumableStream(streamId, () => stream),
+      );
+    } else {
+      return new Response(stream);
+    }
+  } catch (error) {
+    console.error('Chat API error:', error);
+    if (error instanceof ChatSDKError) {
+      return error.toResponse();
+    }
+    return new ChatSDKError(
+      'bad_request:database',
+      'An unexpected error occurred',
+    ).toResponse();
+  }
+}
+
+export async function GET(request: Request) {
+  const streamContext = getStreamContext();
+  const resumeRequestedAt = new Date();
+
+  if (!streamContext) {
+    return new Response(null, { status: 204 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const chatId = searchParams.get('chatId');
+
+  if (!chatId) {
+    return new ChatSDKError('bad_request:api').toResponse();
+  }
+
+  const session = await auth();
+
+  if (!session?.user) {
+    return new ChatSDKError('unauthorized:chat').toResponse();
+  }
+
+  let chat: Chat;
+
+  try {
+    chat = await getChatById({ id: chatId });
+  } catch {
+    return new ChatSDKError('not_found:chat').toResponse();
+  }
+
+  if (!chat) {
+    return new ChatSDKError('not_found:chat').toResponse();
+  }
+
+  if (chat.visibility === 'private' && chat.userId !== session.user.id) {
+    return new ChatSDKError('forbidden:chat').toResponse();
+  }
+
+  const streamIds = await getStreamIdsByChatId({ chatId });
+
+  if (!streamIds.length) {
+    return new ChatSDKError('not_found:stream').toResponse();
+  }
+
+  const recentStreamId = streamIds.at(-1);
+
+  if (!recentStreamId) {
+    return new ChatSDKError('not_found:stream').toResponse();
+  }
+
+  const emptyDataStream = createDataStream({
+    execute: () => {},
+  });
+
+  const stream = await streamContext.resumableStream(
+    recentStreamId,
+    () => emptyDataStream,
+  );
+
+  /*
+   * For when the generation is streaming during SSR
+   * but the resumable stream has concluded at this point.
+   */
+  if (!stream) {
+    const messages = await getMessagesByChatId({ id: chatId });
+    const mostRecentMessage = messages.at(-1);
+
+    if (!mostRecentMessage) {
+      return new Response(emptyDataStream, { status: 200 });
+    }
+
+    if (mostRecentMessage.role !== 'assistant') {
+      return new Response(emptyDataStream, { status: 200 });
+    }
+
+    const messageCreatedAt = new Date(mostRecentMessage.createdAt);
+
+    if (differenceInSeconds(resumeRequestedAt, messageCreatedAt) > 15) {
+      return new Response(emptyDataStream, { status: 200 });
+    }
+
+    const restoredStream = createDataStream({
+      execute: (buffer) => {
+        buffer.writeData({
+          type: 'append-message',
+          message: JSON.stringify(mostRecentMessage),
+        });
+      },
+    });
+
+    return new Response(restoredStream, { status: 200 });
+  }
+
+  return new Response(stream, { status: 200 });
+}
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return new ChatSDKError('bad_request:api').toResponse();
+  }
+
+  const session = await auth();
+
+  if (!session?.user) {
+    return new ChatSDKError('unauthorized:chat').toResponse();
+  }
+
+  const chat = await getChatById({ id });
+
+  if (chat.userId !== session.user.id) {
+    return new ChatSDKError('forbidden:chat').toResponse();
+  }
+
+  const deletedChat = await deleteChatById({ id });
+
+  return Response.json(deletedChat, { status: 200 });
+}

@@ -1,62 +1,94 @@
-import { Montserrat } from 'next/font/google'
-import { Inconsolata } from 'next/font/google'
+import { Toaster } from 'sonner';
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import { ThemeProvider } from '@/components/theme-provider';
 
-import '@/app/globals.css'
-import { cn } from '@/lib/utils'
-// import { ThemeToggle } from '@/components/theme-toggle'
-import { Providers } from '@/components/providers'
-import { Header } from '@/components/header'
-import { Toaster } from '@/components/ui/sonner'
+import './globals.css';
+import { SessionProvider } from 'next-auth/react';
+import { ProviderContextProvider } from '@/lib/ai/provider-context';
+import { ApiKeySync } from '@/hooks/api-key-sync';
 
-export const metadata = {
-  title: 'Fincha',
-  description:
-    'Fincha is a financial chatbot that helps you make better investment decisions.'
-}
+export const metadata: Metadata = {
+  metadataBase: new URL('https://chat.vercel.ai'),
+  title: 'Next.js Chatbot Template',
+  description: 'Next.js chatbot template using the AI SDK.',
+};
 
 export const viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' }
-  ]
-}
+  maximumScale: 1, // Disable auto-zoom on mobile Safari
+};
 
-const montserrat = Montserrat({
+const geist = Geist({
   subsets: ['latin'],
-  variable: '--font-montserrat'
-})
+  display: 'swap',
+  variable: '--font-geist',
+});
 
-const inconsolata = Inconsolata({
+const geistMono = Geist_Mono({
   subsets: ['latin'],
-  variable: '--font-inconsolata'
-})
+  display: 'swap',
+  variable: '--font-geist-mono',
+});
 
-interface RootLayoutProps {
-  children: React.ReactNode
-}
+const LIGHT_THEME_COLOR = 'hsl(0 0% 100%)';
+const DARK_THEME_COLOR = 'hsl(240deg 10% 3.92%)';
+const THEME_COLOR_SCRIPT = `\
+(function() {
+  var html = document.documentElement;
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.setAttribute('name', 'theme-color');
+    document.head.appendChild(meta);
+  }
+  function updateThemeColor() {
+    var isDark = html.classList.contains('dark');
+    meta.setAttribute('content', isDark ? '${DARK_THEME_COLOR}' : '${LIGHT_THEME_COLOR}');
+  }
+  var observer = new MutationObserver(updateThemeColor);
+  observer.observe(html, { attributes: true, attributeFilter: ['class'] });
+  updateThemeColor();
+})();`;
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html
       lang="en"
+      // `next-themes` injects an extra classname to the body element to avoid
+      // visual flicker before hydration. Hence the `suppressHydrationWarning`
+      // prop is necessary to avoid the React hydration mismatch warning.
+      // https://github.com/pacocoursey/next-themes?tab=readme-ov-file#with-app
       suppressHydrationWarning
-      className={cn(montserrat.variable, inconsolata.variable)}
+      className={`${geist.variable} ${geistMono.variable}`}
     >
-      <body className={cn('font-sans antialiased')}>
-        <Toaster position="top-center" />
-        <Providers
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: THEME_COLOR_SCRIPT,
+          }}
+        />
+      </head>
+      <body className="antialiased">
+        {' '}
+        <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex flex-col flex-1 bg-muted/50">{children}</main>
-          </div>
-          {/* <ThemeToggle /> */}
-        </Providers>
+          <Toaster position="top-center" />{' '}
+          <SessionProvider>
+            <ProviderContextProvider>
+              <ApiKeySync />
+              {children}
+            </ProviderContextProvider>
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
