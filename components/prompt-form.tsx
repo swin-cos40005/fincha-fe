@@ -35,11 +35,12 @@ export function PromptForm({
     ])
 
     const SERVER_URL =
-      process.env.API_SERVER_ORIGIN || 'http://localhost:8080/api'
+      process.env.NEXT_PUBLIC_API_SERVER_ORIGIN || 'http://localhost:8080/api'
     console.log('SERVER_URL: ', SERVER_URL)
-    const res = await fetch(`${SERVER_URL}/chat`, {
+    const res = await fetch(`${SERVER_URL}/conversation/`, {
       method: 'POST',
-      body: JSON.stringify({ message: value }),
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: value }),
       cache: 'no-store'
     })
 
@@ -50,12 +51,17 @@ export function PromptForm({
     }
 
     const data = await res.json()
-    console.log('data: ', data)
-    console.log('responseMessage: ', JSON.stringify(data, null, 2))
+    
+
+    const assistantText =
+      (data && data.data && data.data.response) ||
+      data?.message ||
+      data?.response ||
+      ''
 
     setMessages(prevMessages => [
       ...prevMessages,
-      { id: nanoid(), role: 'assistant', content: data.message as string }
+      { id: nanoid(), role: 'assistant', content: assistantText }
     ])
   }
 
