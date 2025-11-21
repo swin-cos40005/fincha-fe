@@ -5,7 +5,7 @@
 export async function submitUserMessage(message: string) {
   console.log('message: ', message)
   
-  const SERVER_URL = process.env.API_SERVER_ORIGIN || 'http://localhost:8080/api'
+  const SERVER_URL = process.env.NEXT_PUBLIC_API_SERVER_ORIGIN || 'http://localhost:8080'
   console.log('SERVER_URL: ', SERVER_URL)
   const res = await fetch(`${SERVER_URL}/conversation/`, {
     method: 'POST',
