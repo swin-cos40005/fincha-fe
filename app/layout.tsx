@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 // import { ThemeToggle } from '@/components/theme-toggle'
 import { Providers } from '@/components/providers'
 import { Header } from '@/components/header'
+import { SidebarLayout } from '@/components/sidebar-layout'
 import { Toaster } from '@/components/ui/sonner'
 
 export const metadata = {
@@ -50,11 +51,12 @@ export default function RootLayout({ children }: RootLayoutProps) {
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex flex-col flex-1 bg-muted/50">{children}</main>
-          </div>
-          {/* <ThemeToggle /> */}
+          <SidebarLayout>
+            <div className="flex flex-col flex-1 h-full min-h-0">
+              <Header />
+              <main className="flex flex-col flex-1 bg-muted/50 overflow-auto">{children}</main>
+            </div>
+          </SidebarLayout>
         </Providers>
       </body>
     </html>
