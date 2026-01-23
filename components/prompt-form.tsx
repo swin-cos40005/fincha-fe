@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import Textarea from 'react-textarea-autosize'
+import { fetchApi } from '@/lib/api-client'
 
 import { Button } from '@/components/ui/button'
 import { IconArrowDown, IconPlus } from '@/components/ui/icons'
@@ -34,12 +35,8 @@ export function PromptForm({
       { id: nanoid(), role: 'user', content: value }
     ])
 
-    const SERVER_URL =
-      process.env.NEXT_PUBLIC_API_SERVER_ORIGIN || 'http://localhost:8080/api'
-    console.log('SERVER_URL: ', SERVER_URL)
-    const res = await fetch(`${SERVER_URL}/conversation/`, {
+    const res = await fetchApi('/conversation/', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ query: value }),
       cache: 'no-store'
     })
@@ -51,7 +48,7 @@ export function PromptForm({
     }
 
     const data = await res.json()
-    
+
 
     const assistantText =
       (data && data.data && data.data.response) ||

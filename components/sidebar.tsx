@@ -17,7 +17,7 @@ import {
     History
 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
-import { LoginDialog } from "@/components/login-dialog"
+
 import {
     Tooltip,
     TooltipContent,
@@ -137,12 +137,12 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                         </TooltipProvider>
                     </div>
                 ) : (
-                    <LoginDialog>
+                    <Link href="/login">
                         <Button className={cn("w-full gap-2", isCollapsed && "px-0 justify-center")} variant="default" size={isCollapsed ? "icon" : "default"}>
                             <UserIcon className="h-4 w-4" />
                             {!isCollapsed && <span>Sign In</span>}
                         </Button>
-                    </LoginDialog>
+                    </Link>
                 )}
             </div>
         </div>

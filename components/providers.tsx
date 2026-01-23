@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { ThemeProvider as NextThemesProvider } from 'next-themes'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { AuthProvider } from '@/components/auth-provider'
 
 export function Providers({
   children,
@@ -10,7 +11,9 @@ export function Providers({
 }: React.ComponentProps<typeof NextThemesProvider>) {
   return (
     <NextThemesProvider {...props}>
-      <TooltipProvider>{children}</TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>{children}</TooltipProvider>
+      </AuthProvider>
     </NextThemesProvider>
   )
 }

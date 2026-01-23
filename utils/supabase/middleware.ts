@@ -1,10 +1,16 @@
-
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Routes that require authentication
+const PROTECTED_ROUTES = ['/chat', '/settings', '/profile']
+// Routes that should redirect to home if authenticated
+const AUTH_ROUTES = ['/login', '/signup']
+
 export async function updateSession(request: NextRequest) {
-    let supabaseResponse = NextResponse.next({
-        request,
+    let response = NextResponse.next({
+        request: {
+            headers: request.headers,
+        },
     })
 
     const supabase = createServerClient(
@@ -16,39 +22,37 @@ export async function updateSession(request: NextRequest) {
                     return request.cookies.getAll()
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) =>
+                    cookiesToSet.forEach(({ name, value, options }) => {
                         request.cookies.set(name, value)
-                    )
-                    supabaseResponse = NextResponse.next({
-                        request,
+                        response.cookies.set(name, value, options)
                     })
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        supabaseResponse.cookies.set(name, value, options)
-                    )
                 },
             },
         }
     )
 
-    // Do not run Supabase code if we are already on the auth callback, 
-    // login page, or public routes to avoid infinite redirects if logic is complicated.
-    // HOWEVER, for `updateSession`, we usually just want to refresh the token.
-
+    // refreshing the auth token
     const {
         data: { user },
     } = await supabase.auth.getUser()
 
-    // Protect routes - if you are not signed in and trying to access
-    // protected routes, redirect to login.
-    // We'll assume '/' is protected but maybe we want a landing page.
-    // For now, let's protect everything and redirect to a login page if we have one,
-    // or just let the client side handle the modal triggering.
+    const pathname = request.nextUrl.pathname
 
-    // Since the layout uses a modal for login, strictly blocking routes might be jarring
-    // if we don't have a dedicated /login page.
-    // But the request asked to "Protect authenticated routes".
+    // Check if it's a protected route
+    const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route))
+    const isAuthRoute = AUTH_ROUTES.some(route => pathname.startsWith(route))
 
-    // Let's protect specific paths if they exist, or just ensure the session is valid.
+    if (user && isAuthRoute) {
+        // Already authenticated, redirect to home
+        return NextResponse.redirect(new URL('/', request.url))
+    }
 
-    return supabaseResponse
+    if (!user && isProtectedRoute) {
+        // No user, redirect to login
+        const loginUrl = new URL('/login', request.url)
+        loginUrl.searchParams.set('next', pathname)
+        return NextResponse.redirect(loginUrl)
+    }
+
+    return response
 }
