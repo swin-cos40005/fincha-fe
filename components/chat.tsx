@@ -17,33 +17,62 @@ export interface ChatProps extends React.ComponentProps<'div'> {
 export function Chat({ id, className, session }: ChatProps) {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
+  const [hasInteracted, setHasInteracted] = useState(false)
 
   const { messagesRef, scrollRef, visibilityRef, isAtBottom, scrollToBottom } =
     useScrollAnchor()
 
+  const handleInteraction = () => {
+    if (!hasInteracted) {
+      setHasInteracted(true)
+    }
+  }
+
   return (
     <div
-      className="group w-full overflow-auto pl-0 peer-[[data-state=open]]:lg:pl-[250px] peer-[[data-state=open]]:xl:pl-[300px]"
+      className={cn(
+        "group w-full pl-0 peer-[[data-state=open]]:lg:pl-[250px] peer-[[data-state=open]]:xl:pl-[300px] relative",
+        messages.length ? "overflow-auto" : "overflow-hidden"
+      )}
       ref={scrollRef}
     >
-      <div
-        className={cn(
-          messages.length ? 'pb-[200px] pt-4 md:pt-6' : 'pb-[200px] pt-0',
-          className
-        )}
-        ref={messagesRef}
-      >
-        {messages.length ? <ChatList messages={messages} /> : <EmptyScreen />}
-        <div className="w-full h-px" ref={visibilityRef} />
-      </div>
-      <ChatPanel
-        id={id}
-        input={input}
-        setInput={setInput}
-        isAtBottom={isAtBottom}
-        scrollToBottom={scrollToBottom}
-        setMessages={setMessages}
-      />
+      {messages.length ? (
+        <div className="pb-[200px] pt-4 md:pt-6" ref={messagesRef}>
+          <ChatList messages={messages} />
+          <div className="w-full h-px" ref={visibilityRef} />
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] px-4">
+          <div className="w-full max-w-2xl flex flex-col items-center gap-8">
+            <EmptyScreen />
+            <div className="w-full">
+              <ChatPanel
+                id={id}
+                input={input}
+                setInput={setInput}
+                isAtBottom={isAtBottom}
+                scrollToBottom={scrollToBottom}
+                setMessages={setMessages}
+                hasInteracted={hasInteracted}
+                onInteraction={handleInteraction}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {messages.length > 0 && (
+        <ChatPanel
+          id={id}
+          input={input}
+          setInput={setInput}
+          isAtBottom={isAtBottom}
+          scrollToBottom={scrollToBottom}
+          setMessages={setMessages}
+          hasInteracted={hasInteracted}
+          onInteraction={handleInteraction}
+        />
+      )}
     </div>
   )
 }
