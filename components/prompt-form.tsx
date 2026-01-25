@@ -12,7 +12,6 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip'
 import { useEnterSubmit } from '@/lib/hooks/use-enter-submit'
-import { useRouter } from 'next/navigation'
 import { Message } from '@/lib/types'
 import { nanoid } from 'nanoid'
 
@@ -25,9 +24,10 @@ export function PromptForm({
   setInput: (value: string) => void
   setMessages: (messages: (currentMessages: Message[]) => Message[]) => void
 }) {
-  const router = useRouter()
   const { formRef, onKeyDown } = useEnterSubmit()
   const inputRef = React.useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
 
   const handleSubmit = async (value: string) => {
     setMessages(prevMessages => [
@@ -62,6 +62,19 @@ export function PromptForm({
     ])
   }
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Check file type (PDF or TXT only)
+      const validTypes = ['application/pdf', 'text/plain']
+      if (!validTypes.includes(file.type)) {
+        alert('Please select a PDF or TXT file')
+        return
+      }
+      setSelectedFile(file)
+    }
+  }
+
   React.useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus()
@@ -84,6 +97,10 @@ export function PromptForm({
         if (!value) return
 
         console.log('value: ', value)
+        if (selectedFile) {
+          console.log('Selected file: ', selectedFile.name)
+          // Note: Backend processing not implemented yet
+        }
 
         handleSubmit(value)
       }}
@@ -92,18 +109,17 @@ export function PromptForm({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
+              type="button"
               variant="outline"
               size="icon"
               className="absolute left-0 top-[14px] size-8 rounded-full bg-background p-0 sm:left-4"
-              onClick={() => {
-                router.push('/new')
-              }}
+              onClick={() => fileInputRef.current?.click()}
             >
               <IconPlus />
-              <span className="sr-only">New Chat</span>
+              <span className="sr-only">Upload file</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>New Chat</TooltipContent>
+          <TooltipContent>Upload file (PDF, TXT)</TooltipContent>
         </Tooltip>
         <Textarea
           ref={inputRef}
@@ -121,6 +137,13 @@ export function PromptForm({
           onChange={e => setInput(e.target.value)}
         />
         <div className="absolute right-0 top-[13px] sm:right-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.txt"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
           <Tooltip>
             <TooltipTrigger asChild>
               <Button type="submit" size="icon" disabled={input === ''}>
