@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -16,7 +15,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
             <Sidebar
                 isCollapsed={isCollapsed}
                 setIsCollapsed={setIsCollapsed}
-                className="hidden md:flex border-r"
+                className="hidden lg:flex border-r"
             />
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
                 {children}
