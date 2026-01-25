@@ -11,7 +11,12 @@ import { Toaster } from '@/components/ui/sonner'
 export const metadata = {
   title: 'Fincha',
   description:
-    'Fincha is a financial chatbot that helps you make better investment decisions.'
+    'Fincha is a financial chatbot that helps you make better investment decisions.',
+  icons: {
+    icon: '/logo-light.png',
+    shortcut: '/logo-light.png',
+    apple: '/logo-light.png',
+  }
 }
 
 export const viewport = {

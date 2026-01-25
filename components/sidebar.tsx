@@ -2,7 +2,9 @@
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,47 +35,87 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps) {
     const { user, signOut } = useAuth()
     const pathname = usePathname()
+    const { theme, resolvedTheme } = useTheme()
+    
+    const logoSrc = (theme === 'dark' || resolvedTheme === 'dark') ? '/logo-dark.png' : '/logo-light.png'
 
     return (
         <div
             data-collapsed={isCollapsed}
             className={cn(
-                "group flex flex-col gap-4 py-4 data-[collapsed=true]:py-4 h-full bg-muted/20 border-r transition-all duration-300 ease-in-out",
+                "group flex flex-col h-full bg-muted/20 border-r transition-all duration-300 ease-in-out",
                 isCollapsed ? "w-[60px]" : "w-64",
                 className
             )}
         >
-            <div className={cn("flex items-center px-2", isCollapsed ? "justify-center" : "justify-between px-4")}>
-                {!isCollapsed && (
-                    <div className="flex items-center gap-2 font-semibold">
-                        <span className="">Fincha</span>
+            <div className={cn(
+                "flex items-center h-16 shrink-0",
+                isCollapsed ? "justify-center px-2" : "justify-between px-4"
+            )}>
+                {!isCollapsed ? (
+                    <>
+                        <Link href="/" className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+                            <Image
+                                src={logoSrc}
+                                alt="Fincha"
+                                width={30}
+                                height={30}
+                                className="object-contain"
+                                priority
+                            />
+                        </Link>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 shrink-0"
+                            onClick={() => setIsCollapsed(!isCollapsed)}
+                        >
+                            <PanelLeftClose className="h-5 w-5" />
+                            <span className="sr-only">Toggle Sidebar</span>
+                        </Button>
+                    </>
+                ) : (
+                    <div className="relative w-full group">
+                        <Link 
+                            href="/" 
+                            className="flex items-center justify-center rounded-lg px-2 py-2.5 hover:bg-accent hover:text-accent-foreground transition-all group-hover:opacity-0"
+                        >
+                            <Image
+                                src={logoSrc}
+                                alt="Fincha"
+                                width={30}
+                                height={30}
+                                className="object-contain"
+                                priority
+                            />
+                        </Link>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-lg px-2 py-2.5 h-auto w-auto absolute inset-0 mx-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => setIsCollapsed(false)}
+                        >
+                            <PanelLeftOpen className="h-5 w-5" />
+                            <span className="sr-only">Open Sidebar</span>
+                        </Button>
                     </div>
                 )}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                >
-                    {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-                    <span className="sr-only">Toggle Sidebar</span>
-                </Button>
             </div>
 
-            <div className="flex-1 overflow-auto py-2">
-                <nav className="grid gap-1 px-2">
+            <div className="flex-1 overflow-auto">
+                <nav className="grid gap-1 px-2 py-4">
                     <TooltipProvider delayDuration={0}>
                         <Link
                             href="/"
                             className={cn(
-                                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-all",
+                                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-all",
                                 pathname === "/" && "bg-accent text-accent-foreground",
                                 isCollapsed && "justify-center px-2"
                             )}
                         >
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <MessageSquare className="h-4 w-4" />
+                                    <MessageSquare className="h-5 w-5" />
                                 </TooltipTrigger>
                                 <TooltipContent side="right" className="flex items-center gap-4">
                                     New Chat
@@ -84,7 +126,7 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                     </TooltipProvider>
 
                     {!isCollapsed && (
-                        <div className="mt-6 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                        <div className="mt-6 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
                             History
                         </div>
                     )}
@@ -92,13 +134,13 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                     <div className={cn("mt-2", isCollapsed ? "px-0 flex justify-center" : "px-2")}>
                         {user ? (
                             !isCollapsed ? (
-                                <div className="text-xs text-muted-foreground italic px-2">No recent chats</div>
+                                <div className="text-xs text-muted-foreground italic px-2 py-1">No recent chats</div>
                             ) : (
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                                                <History className="h-4 w-4" />
+                                            <Button variant="ghost" size="icon" className="rounded-lg px-2 py-2.5 h-auto w-auto text-muted-foreground">
+                                                <History className="h-5 w-5" />
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="right">History</TooltipContent>
@@ -106,29 +148,41 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                                 </TooltipProvider>
                             )
                         ) : (
-                            !isCollapsed && <div className="text-xs text-muted-foreground px-2">Sign in to view history</div>
+                            !isCollapsed && <div className="text-xs text-muted-foreground px-2 py-1">Sign in to view history</div>
                         )}
                     </div>
                 </nav>
             </div>
 
-            <div className="mt-auto p-2 border-t">
+            <div className="mt-auto p-3 border-t">
                 {user ? (
-                    <div className={cn("flex items-center gap-2", isCollapsed ? "justify-center flex-col" : "justify-between")}>
-                        <div className={cn("flex items-center gap-2 overflow-hidden", isCollapsed && "justify-center")}>
-                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center border text-primary shrink-0">
-                                <span className="text-xs font-medium">{user.email?.charAt(0).toUpperCase()}</span>
+                    <div className={cn(
+                        "flex items-center gap-3",
+                        isCollapsed ? "justify-center flex-col gap-2" : "justify-between"
+                    )}>
+                        <div className={cn(
+                            "flex items-center gap-3 overflow-hidden min-w-0",
+                            isCollapsed && "justify-center"
+                        )}>
+                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shrink-0">
+                                <span className="text-sm font-semibold">{user.email?.charAt(0).toUpperCase()}</span>
                             </div>
                             {!isCollapsed && (
-                                <div className="text-xs overflow-hidden">
-                                    <p className="font-medium truncate max-w-[120px]" title={user.email || ""}>{user.email}</p>
+                                <div className="text-xs overflow-hidden flex-1 min-w-0">
+                                    <p className="font-medium truncate" title={user.email || ""}>{user.email}</p>
                                 </div>
                             )}
                         </div>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" onClick={() => signOut()} title="Sign Out">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        onClick={() => signOut()} 
+                                        className="h-9 w-9 shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                                        title="Sign Out"
+                                    >
                                         <LogOut className="h-4 w-4" />
                                     </Button>
                                 </TooltipTrigger>
@@ -137,8 +191,15 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                         </TooltipProvider>
                     </div>
                 ) : (
-                    <Link href="/login">
-                        <Button className={cn("w-full gap-2", isCollapsed && "px-0 justify-center")} variant="default" size={isCollapsed ? "icon" : "default"}>
+                    <Link href="/login" className="block">
+                        <Button 
+                            className={cn(
+                                "w-full gap-2 font-medium shadow-sm",
+                                isCollapsed && "px-0 justify-center"
+                            )} 
+                            variant="default" 
+                            size={isCollapsed ? "icon" : "default"}
+                        >
                             <UserIcon className="h-4 w-4" />
                             {!isCollapsed && <span>Sign In</span>}
                         </Button>

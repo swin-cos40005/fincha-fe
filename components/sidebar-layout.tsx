@@ -12,7 +12,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     const [isCollapsed, setIsCollapsed] = React.useState(false)
 
     return (
-        <div className="flex h-screen overflow-hidden bg-background">
+        <div className="flex h-screen overflow-hidden bg-muted/20">
             <Sidebar
                 isCollapsed={isCollapsed}
                 setIsCollapsed={setIsCollapsed}
