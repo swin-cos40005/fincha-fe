@@ -4,7 +4,6 @@ import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,9 +34,6 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps) {
     const { user, signOut } = useAuth()
     const pathname = usePathname()
-    const { theme, resolvedTheme } = useTheme()
-    
-    const logoSrc = (theme === 'dark' || resolvedTheme === 'dark') ? '/logo-dark.png' : '/logo-light.png'
 
     return (
         <div
@@ -56,11 +52,19 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                     <>
                         <Link href="/" className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
                             <Image
-                                src={logoSrc}
+                                src="/logo-light.png"
                                 alt="Fincha"
                                 width={30}
                                 height={30}
-                                className="object-contain"
+                                className="object-contain block dark:hidden"
+                                priority
+                            />
+                            <Image
+                                src="/logo-dark.png"
+                                alt="Fincha"
+                                width={30}
+                                height={30}
+                                className="object-contain hidden dark:block"
                                 priority
                             />
                         </Link>
@@ -76,16 +80,24 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                     </>
                 ) : (
                     <div className="relative w-full group">
-                        <Link 
-                            href="/" 
+                        <Link
+                            href="/"
                             className="flex items-center justify-center rounded-lg px-2 py-2.5 hover:bg-accent hover:text-accent-foreground transition-all group-hover:opacity-0"
                         >
                             <Image
-                                src={logoSrc}
+                                src="/logo-light.png"
                                 alt="Fincha"
                                 width={30}
                                 height={30}
-                                className="object-contain"
+                                className="object-contain block dark:hidden"
+                                priority
+                            />
+                            <Image
+                                src="/logo-dark.png"
+                                alt="Fincha"
+                                width={30}
+                                height={30}
+                                className="object-contain hidden dark:block"
                                 priority
                             />
                         </Link>
@@ -176,10 +188,10 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={() => signOut()} 
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => signOut()}
                                         className="h-9 w-9 shrink-0 hover:bg-destructive/10 hover:text-destructive"
                                         title="Sign Out"
                                     >
@@ -192,12 +204,12 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                     </div>
                 ) : (
                     <Link href="/login" className="block">
-                        <Button 
+                        <Button
                             className={cn(
                                 "w-full gap-2 font-medium shadow-sm",
                                 isCollapsed && "px-0 justify-center"
-                            )} 
-                            variant="default" 
+                            )}
+                            variant="default"
                             size={isCollapsed ? "icon" : "default"}
                         >
                             <UserIcon className="h-4 w-4" />

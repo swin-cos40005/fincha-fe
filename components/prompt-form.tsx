@@ -137,6 +137,8 @@ export function PromptForm({
           autoComplete="off"
           autoCorrect="off"
           name="message"
+          data-gramm="false"
+          wt-ignore-input="true"
           rows={1}
           value={input}
           onChange={e => setInput(e.target.value)}
