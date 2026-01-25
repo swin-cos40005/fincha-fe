@@ -28,51 +28,58 @@ export function Chat({ id, className, session }: ChatProps) {
     }
   }
 
+  // Before interaction: centered layout
+  if (!hasInteracted) {
+    return (
+      <div className="group absolute inset-0 flex flex-col items-center justify-center px-4">
+        <div className="w-full max-w-2xl flex flex-col items-center gap-8">
+          <EmptyScreen />
+          <div className="w-full">
+            <ChatPanel
+              id={id}
+              input={input}
+              setInput={setInput}
+              isAtBottom={isAtBottom}
+              scrollToBottom={scrollToBottom}
+              setMessages={setMessages}
+              hasInteracted={hasInteracted}
+              onInteraction={handleInteraction}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // After interaction: fixed bottom layout with scrollable messages
   return (
-    <div
-      className={cn(
-        "group w-full pl-0 peer-[[data-state=open]]:lg:pl-[250px] peer-[[data-state=open]]:xl:pl-[300px] relative",
-        messages.length ? "overflow-auto" : "overflow-hidden"
-      )}
-      ref={scrollRef}
-    >
-      {messages.length ? (
-        <div className="pb-[200px] pt-4 md:pt-6" ref={messagesRef}>
+    <div className="group absolute inset-0 flex flex-col">
+      {/* Scrollable messages area */}
+      <div 
+        className="flex-1 overflow-y-auto overflow-x-hidden min-h-0"
+        ref={scrollRef}
+      >
+        <div className="mx-auto max-w-2xl px-4 pb-4 pt-8 md:pt-12 lg:pt-16" ref={messagesRef}>
           <ChatList messages={messages} />
           <div className="w-full h-px" ref={visibilityRef} />
         </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] px-4">
-          <div className="w-full max-w-2xl flex flex-col items-center gap-8">
-            <EmptyScreen />
-            <div className="w-full">
-              <ChatPanel
-                id={id}
-                input={input}
-                setInput={setInput}
-                isAtBottom={isAtBottom}
-                scrollToBottom={scrollToBottom}
-                setMessages={setMessages}
-                hasInteracted={hasInteracted}
-                onInteraction={handleInteraction}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
       
-      {messages.length > 0 && (
-        <ChatPanel
-          id={id}
-          input={input}
-          setInput={setInput}
-          isAtBottom={isAtBottom}
-          scrollToBottom={scrollToBottom}
-          setMessages={setMessages}
-          hasInteracted={hasInteracted}
-          onInteraction={handleInteraction}
-        />
-      )}
+      {/* Fixed input panel at bottom */}
+      <div className="flex-shrink-0 border-t bg-background w-full">
+        <div className="mx-auto max-w-2xl px-4">
+          <ChatPanel
+            id={id}
+            input={input}
+            setInput={setInput}
+            isAtBottom={isAtBottom}
+            scrollToBottom={scrollToBottom}
+            setMessages={setMessages}
+            hasInteracted={hasInteracted}
+            onInteraction={handleInteraction}
+          />
+        </div>
+      </div>
     </div>
   )
 }

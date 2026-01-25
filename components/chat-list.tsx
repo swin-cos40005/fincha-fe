@@ -1,5 +1,5 @@
 import { Separator } from '@/components/ui/separator'
-import { Message, Session } from '@/lib/types'
+import { Message } from '@/lib/types'
 import { BotMessage, UserMessage } from './stocks/message'
 
 export interface ChatList {
@@ -14,7 +14,7 @@ export function ChatList({ messages }: ChatList) {
   console.log('messages: ', messages)
 
   return (
-    <div className="relative mx-auto max-w-2xl px-4">
+    <div className="relative mx-auto max-w-2xl px-4 pb-4">
       {messages.map((message, index) => (
         <div key={message.id}>
           <div>

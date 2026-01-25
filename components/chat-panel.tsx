@@ -33,21 +33,16 @@ export function ChatPanel({
   onInteraction
 }: ChatPanelProps) {
   return (
-    <div className={cn(
-      "w-full",
-      hasInteracted 
-        ? "absolute bottom-0 left-0 right-0 duration-300 ease-in-out animate-in" 
-        : "relative"
-    )}>
-      {hasInteracted && (
+    <div className="w-full relative">
+      {hasInteracted && !isAtBottom && (
         <ButtonScrollToBottom
           isAtBottom={isAtBottom}
           scrollToBottom={scrollToBottom}
-          className="pointer-events-auto"
+          className="absolute -top-14 right-4 z-10"
         />
       )}
 
-      <div className="mx-auto sm:max-w-2xl px-4 py-4">
+      <div className="mx-auto sm:max-w-2xl px-4 py-3">
         <PromptForm
           input={input}
           setInput={setInput}
