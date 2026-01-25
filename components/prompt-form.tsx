@@ -18,11 +18,13 @@ import { nanoid } from 'nanoid'
 export function PromptForm({
   input,
   setInput,
-  setMessages
+  setMessages,
+  onInteraction
 }: {
   input: string
   setInput: (value: string) => void
   setMessages: (messages: (currentMessages: Message[]) => Message[]) => void
+  onInteraction?: () => void
 }) {
   const { formRef, onKeyDown } = useEnterSubmit()
   const inputRef = React.useRef<HTMLTextAreaElement>(null)
@@ -96,6 +98,9 @@ export function PromptForm({
         setInput('')
         if (!value) return
 
+        // Trigger interaction callback
+        onInteraction?.()
+
         console.log('value: ', value)
         if (selectedFile) {
           console.log('Selected file: ', selectedFile.name)
@@ -105,7 +110,7 @@ export function PromptForm({
         handleSubmit(value)
       }}
     >
-      <div className="relative flex max-h-60 w-full grow flex-col overflow-hidden bg-background px-8 sm:border sm:px-12">
+      <div className="relative flex max-h-60 w-full grow flex-col overflow-hidden bg-background px-8 sm:rounded-md sm:border sm:px-12">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
