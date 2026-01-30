@@ -1,0 +1,120 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.6.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run ESLint
+        run: pnpm lint
+
+      - name: Run TypeScript type check
+        run: pnpm type-check
+
+  preview:
+    name: Deploy Preview
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy the app
+        id: deploy
+        uses: digitalocean/app_action/deploy@v2
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.STAGING_API_URL }}
+          NEXT_PUBLIC_ENV: staging
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        with:
+          deploy_pr_preview: 'true'
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Comment on PR (success)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `:rocket: :rocket: :rocket: The app was successfully deployed at ${{ fromJson(steps.deploy.outputs.app).live_url }}.`
+            })
+
+      - name: Comment on PR (failure)
+        if: failure()
+        env:
+          BUILD_LOGS: ${{ steps.deploy.outputs.build_logs }}
+          DEPLOY_LOGS: ${{ steps.deploy.outputs.deploy_logs }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { BUILD_LOGS, DEPLOY_LOGS } = process.env
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ The app failed to deploy. Logs can be found [here](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+            ## Logs
+            <details>
+            <summary>Build logs</summary>
+
+            \`\`\`
+            ${BUILD_LOGS}
+            \`\`\`
+            </details>
+
+            <details>
+            <summary>Deploy logs</summary>
+
+            \`\`\`
+            ${DEPLOY_LOGS}
+            \`\`\`
+            </details>`
+            })
+
+  delete-preview:
+    name: Delete Preview
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete preview app
+        uses: digitalocean/app_action/delete@v2
+        with:
+          from_pr_preview: 'true'
+          ignore_not_found: 'true'
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
