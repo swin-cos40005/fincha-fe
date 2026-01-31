@@ -8,7 +8,8 @@ export function TickerTape() {
   const container = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!container.current) return
+    const currentContainer = container.current
+    if (!currentContainer) return
 
     const script = document.createElement('script')
     script.src =
@@ -48,14 +49,12 @@ export function TickerTape() {
       locale: 'en'
     })
 
-    container.current.appendChild(script)
+    currentContainer.appendChild(script)
 
     return () => {
-      if (container.current) {
-        const scriptElement = container.current.querySelector('script')
-        if (scriptElement) {
-          container.current.removeChild(scriptElement)
-        }
+      const scriptElement = currentContainer.querySelector('script')
+      if (scriptElement) {
+        currentContainer.removeChild(scriptElement)
       }
     }
   }, [])

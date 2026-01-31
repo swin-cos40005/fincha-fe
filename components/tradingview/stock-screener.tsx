@@ -6,7 +6,8 @@ export function StockScreener({}) {
   const container = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!container.current) return
+    const currentContainer = container.current
+    if (!currentContainer) return
     const script = document.createElement('script')
     script.src =
       'https://s3.tradingview.com/external-embedding/embed-widget-screener.js'
@@ -24,12 +25,10 @@ export function StockScreener({}) {
       isTransparent: true
     })
 
-    container.current.appendChild(script)
+    currentContainer.appendChild(script)
 
     return () => {
-      if (container.current) {
-        container.current.removeChild(script)
-      }
+      currentContainer.removeChild(script)
     }
   }, [])
 

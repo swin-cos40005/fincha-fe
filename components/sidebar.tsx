@@ -71,10 +71,10 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 shrink-0"
+                            className="size-9 shrink-0"
                             onClick={() => setIsCollapsed(!isCollapsed)}
                         >
-                            <PanelLeftClose className="h-5 w-5" />
+                            <PanelLeftClose className="size-5" />
                             <span className="sr-only">Toggle Sidebar</span>
                         </Button>
                     </>
@@ -104,10 +104,10 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="rounded-lg px-2 py-2.5 h-auto w-auto absolute inset-0 mx-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="rounded-lg px-2 py-2.5 size-auto absolute inset-0 mx-auto opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={() => setIsCollapsed(false)}
                         >
-                            <PanelLeftOpen className="h-5 w-5" />
+                            <PanelLeftOpen className="size-5" />
                             <span className="sr-only">Open Sidebar</span>
                         </Button>
                     </div>
@@ -127,7 +127,7 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                         >
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <MessageSquare className="h-5 w-5" />
+                                    <MessageSquare className="size-5" />
                                 </TooltipTrigger>
                                 <TooltipContent side="right" className="flex items-center gap-4">
                                     New Chat
@@ -151,8 +151,8 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="rounded-lg px-2 py-2.5 h-auto w-auto text-muted-foreground">
-                                                <History className="h-5 w-5" />
+                                            <Button variant="ghost" size="icon" className="rounded-lg px-2 py-2.5 size-auto text-muted-foreground">
+                                                <History className="size-5" />
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="right">History</TooltipContent>
@@ -176,7 +176,7 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                             "flex items-center gap-3 overflow-hidden min-w-0",
                             isCollapsed && "justify-center"
                         )}>
-                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shrink-0">
+                            <div className="size-9 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shrink-0">
                                 <span className="text-sm font-semibold">{user.email?.charAt(0).toUpperCase()}</span>
                             </div>
                             {!isCollapsed && (
@@ -192,10 +192,10 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => signOut()}
-                                        className="h-9 w-9 shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                                        className="size-9 shrink-0 hover:bg-destructive/10 hover:text-destructive"
                                         title="Sign Out"
                                     >
-                                        <LogOut className="h-4 w-4" />
+                                        <LogOut className="size-4" />
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent side="right">Sign Out</TooltipContent>
@@ -212,7 +212,7 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
                             variant="default"
                             size={isCollapsed ? "icon" : "default"}
                         >
-                            <UserIcon className="h-4 w-4" />
+                            <UserIcon className="size-4" />
                             {!isCollapsed && <span>Sign In</span>}
                         </Button>
                     </Link>
