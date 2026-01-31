@@ -11,7 +11,8 @@ export function StockChart({ symbol, comparisonSymbols }: { symbol: string, comp
   const container = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!container.current) return
+    const currentContainer = container.current
+    if (!currentContainer) return
     const script = document.createElement('script')
     script.src =
       'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
@@ -37,12 +38,10 @@ export function StockChart({ symbol, comparisonSymbols }: { symbol: string, comp
       support_host: 'https://www.tradingview.com'
     })
 
-    container.current.appendChild(script)
+    currentContainer.appendChild(script)
 
     return () => {
-      if (container.current) {
-        container.current.removeChild(script)
-      }
+      currentContainer.removeChild(script)
     }
   }, [symbol, comparisonSymbols])
 

@@ -6,7 +6,8 @@ export function StockPrice({ props: symbol }: { props: string }) {
   const container = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!container.current) return
+    const currentContainer = container.current
+    if (!currentContainer) return
     const script = document.createElement('script')
     script.src =
       'https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js'
@@ -54,14 +55,12 @@ export function StockPrice({ props: symbol }: { props: string }) {
         ]
       }`
 
-    container.current.appendChild(script)
+    currentContainer.appendChild(script)
 
     return () => {
-      if (container.current) {
-        const scriptElement = container.current.querySelector('script')
-        if (scriptElement) {
-          container.current.removeChild(scriptElement)
-        }
+      const scriptElement = currentContainer.querySelector('script')
+      if (scriptElement) {
+        currentContainer.removeChild(scriptElement)
       }
     }
   }, [symbol])

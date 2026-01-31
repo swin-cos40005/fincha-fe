@@ -66,7 +66,7 @@ export function Chat({ id, className, session }: ChatProps) {
       </div>
       
       {/* Fixed input panel at bottom */}
-      <div className="flex-shrink-0 border-t bg-background w-full">
+      <div className="shrink-0 border-t bg-background w-full">
         <div className="mx-auto max-w-2xl px-4">
           <ChatPanel
             id={id}

@@ -6,7 +6,8 @@ export function MarketOverview({}) {
   const container = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!container.current) return
+    const currentContainer = container.current
+    if (!currentContainer) return
 
     const script = document.createElement('script')
     script.src =
@@ -141,12 +142,10 @@ export function MarketOverview({}) {
       // backgroundColor: "#ffffff"
     })
 
-    container.current.appendChild(script)
+    currentContainer.appendChild(script)
 
     return () => {
-      if (container.current) {
-        container.current.removeChild(script)
-      }
+      currentContainer.removeChild(script)
     }
   }, [])
 
