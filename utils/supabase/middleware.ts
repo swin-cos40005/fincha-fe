@@ -7,15 +7,23 @@ const PROTECTED_ROUTES = ['/chat', '/settings', '/profile']
 const AUTH_ROUTES = ['/login', '/signup']
 
 export async function updateSession(request: NextRequest) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
     let response = NextResponse.next({
         request: {
             headers: request.headers,
         },
     })
 
+    // If env vars are not available, skip auth checks
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return response
+    }
+
     const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        supabaseUrl,
+        supabaseAnonKey,
         {
             cookies: {
                 getAll() {
