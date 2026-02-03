@@ -3,9 +3,7 @@ import { Inconsolata } from 'next/font/google'
 
 import '@/app/globals.css'
 import { cn } from '@/lib/utils'
-import { Providers } from '@/components/providers'
-import { Header } from '@/components/header'
-import { SidebarLayout } from '@/components/sidebar-layout'
+import { Providers } from '@/app/providers'
 import { Toaster } from '@/components/ui/sonner'
 
 export const metadata = {
@@ -55,12 +53,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           enableSystem
           disableTransitionOnChange
         >
-          <SidebarLayout>
-            <div className="flex flex-col flex-1 h-full min-h-0">
-              <Header />
-              <main className="flex flex-col flex-1 bg-muted/20 overflow-auto">{children}</main>
-            </div>
-          </SidebarLayout>
+          {children}
         </Providers>
       </body>
     </html>
