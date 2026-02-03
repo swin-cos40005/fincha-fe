@@ -3,7 +3,7 @@
 import { IconGroq, IconUser } from '@/components/ui/icons'
 import { cn } from '@/lib/utils'
 import { spinner } from './spinner'
-import { CodeBlock } from '../../components/ui/codeblock'
+// import { CodeBlock } from '@/components/ui/codeblock'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import Markdown from 'react-markdown'
