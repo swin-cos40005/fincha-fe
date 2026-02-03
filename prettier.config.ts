@@ -1,5 +1,6 @@
-/** @type {import('prettier').Config} */
-module.exports = {
+import type { Config } from 'prettier'
+
+const config: Config = {
   endOfLine: 'lf',
   semi: false,
   useTabs: false,
@@ -32,3 +33,5 @@ module.exports = {
   importOrderMergeDuplicateImports: true,
   importOrderCombineTypeAndValueImports: true
 }
+
+export default config
