@@ -3,17 +3,17 @@ name: Automatically create / update pull request
 on:
   push:
     branches-ignore:
-      - 'main'
-      - 'dependabot/**'
+      - "main"
+      - "dependabot/**"
 
 jobs:
-  create_pr:
+  create_pr_repo_sync:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Format branch name as title
         id: branch
@@ -23,19 +23,10 @@ jobs:
           echo "title=$TITLE" >> $GITHUB_OUTPUT
 
       - name: Create pull request
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Check if PR already exists for this branch
-          EXISTING_PR=$(gh pr list --head "${{ github.ref_name }}" --json number --jq '.[0].number')
-
-          if [ -z "$EXISTING_PR" ]; then
-            gh pr create \
-              --base main \
-              --head "${{ github.ref_name }}" \
-              --title "${{ steps.branch.outputs.title }}" \
-              --body-file ".github/PULL_REQUEST_TEMPLATE.md" \
-              --draft
-          else
-            echo "PR #$EXISTING_PR already exists for branch ${{ github.ref_name }}"
-          fi
+        uses: repo-sync/pull-request@v2
+        with:
+          destination_branch: "main"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pr_title: "${{ steps.branch.outputs.title }}"
+          pr_template: ".github/PULL_REQUEST_TEMPLATE.md"
+          pr_draft: true
