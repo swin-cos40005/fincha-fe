@@ -45,14 +45,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
       suppressHydrationWarning
       className={cn(montserrat.variable, inconsolata.variable)}
     >
-      <body className={cn('font-sans antialiased')} suppressHydrationWarning>
+      <body className={cn('font-sans antialiased')}>
         <Toaster position="top-center" />
-        <Providers
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <Providers>
           {children}
         </Providers>
       </body>

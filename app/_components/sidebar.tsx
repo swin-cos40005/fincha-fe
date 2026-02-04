@@ -17,7 +17,7 @@ import {
     PanelLeftOpen,
     History
 } from "lucide-react"
-import { useAuth } from "@/app/auth/auth-provider"
+import { useAuth } from "@/app/_providers/auth-store-provider"
 
 import {
     Tooltip,

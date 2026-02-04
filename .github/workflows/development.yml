@@ -3,81 +3,29 @@ name: Deploy Development
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, closed]
-
-concurrency:
-  group: pr-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
   pull-requests: write
 
 jobs:
-  lint:
-    name: Lint & Type Check
-    if: github.event.action != 'closed'
+  test:
+    name: Deploy development
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8.6.3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run ESLint
-        run: pnpm lint
-
-      - name: Run TypeScript type check
-        run: pnpm type-check
-
-  deploy:
-    name: Deploy Development
-    if: github.event.action != 'closed'
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Deploy the app
         id: deploy
         uses: digitalocean/app_action/deploy@v2
         with:
-          app_name: fincha-fe-staging
-          project_id: ${{ secrets.DO_APP_PLATFORM_PROJECT_ID }}
-          deploy_pr_preview: 'true'
+          deploy_pr_preview: "true"
           token: ${{ secrets.DO_APP_PLATFORM_TOKEN }}
-          print_build_logs: 'true'
-          print_deploy_logs: 'true'
-      - name: Comment on PR (success)
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `:rocket: :rocket: :rocket: The app was successfully deployed at ${{ fromJson(steps.deploy.outputs.app).live_url }}.`
-            })
-
-      - name: Comment on PR (failure)
-        if: failure()
+      - uses: actions/github-script@v7
         env:
           BUILD_LOGS: ${{ steps.deploy.outputs.build_logs }}
           DEPLOY_LOGS: ${{ steps.deploy.outputs.deploy_logs }}
-        uses: actions/github-script@v7
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         with:
           script: |
             const { BUILD_LOGS, DEPLOY_LOGS } = process.env
@@ -85,34 +33,28 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `❌ The app failed to deploy. Logs can be found [here](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
-
+              body: `🚀🚀🚀 The app was successfully deployed at ${{ fromJson(steps.deploy.outputs.app).live_url }}. [1]`
+            })
+      - uses: actions/github-script@v7
+        if: failure()
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `The app failed to be deployed. Logs can be found [here](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
               ## Logs
               <details>
-              <summary>Build logs</summary>
-
-              \`\`\`
+              <summary>Build logs</summary> [2]
+              \`\\
               ${BUILD_LOGS}
-              \`\`\`
+              \`\\
               </details>
-
               <details>
-              <summary>Deploy logs</summary>
-
-              \`\`\`
+              <summary>Deploy logs</summary> [3]
+              \`\\
               ${DEPLOY_LOGS}
-              \`\`\`
+              \`\\
               </details>`
             })
-
-  cleanup:
-    name: Delete Development
-    if: github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Delete development app
-        uses: digitalocean/app_action/delete@v2
-        with:
-          from_pr_preview: 'true'
-          ignore_not_found: 'true'
-          token: ${{ secrets.DO_APP_PLATFORM_TOKEN }}
