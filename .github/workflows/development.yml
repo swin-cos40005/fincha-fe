@@ -20,6 +20,7 @@ jobs:
         uses: digitalocean/app_action/deploy@v2
         with:
           deploy_pr_preview: "true"
+          app_spec_location: .do/development.yaml
           token: ${{ secrets.DO_APP_PLATFORM_TOKEN }}
       - uses: actions/github-script@v7
         env:
