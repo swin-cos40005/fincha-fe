@@ -3,7 +3,7 @@ region: sgp
 features:
   - buildpack-stack=ubuntu-22
 github:
-  repo: coderschool/fincha-web
+  repo: swin-cos40005/fincha-fe
   branch: main
 services:
   - name: web
