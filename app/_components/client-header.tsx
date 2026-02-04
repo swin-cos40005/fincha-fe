@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import * as React from 'react'
-import { ThemeToggle } from '@/app/theme-toggle'
+import { ThemeToggle } from '@/app/_components/theme-toggle'
 
 const DynamicThemeToggle = dynamic(
   () => Promise.resolve(ThemeToggle),

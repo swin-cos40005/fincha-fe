@@ -1,19 +1,16 @@
 'use client'
 
 import * as React from 'react'
-import { ThemeProvider as NextThemesProvider } from 'next-themes'
+import { ThemeProvider } from 'next-themes'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { AuthProvider } from '@/app/auth/auth-provider'
+import { AuthStoreProvider } from '@/app/_providers/auth-store-provider'
 
-export function Providers({
-  children,
-  ...props
-}: React.ComponentProps<typeof NextThemesProvider>) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <NextThemesProvider {...props}>
-      <AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <AuthStoreProvider>
         <TooltipProvider>{children}</TooltipProvider>
-      </AuthProvider>
-    </NextThemesProvider>
+      </AuthStoreProvider>
+    </ThemeProvider>
   )
 }
