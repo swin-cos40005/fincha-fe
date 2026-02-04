@@ -2,7 +2,9 @@ name: fincha-dev
 region: sgp
 features:
   - buildpack-stack=ubuntu-22
-
+github:
+  repo: coderschool/fincha-web
+  branch: main
 services:
   - name: web
     http_port: 3000
