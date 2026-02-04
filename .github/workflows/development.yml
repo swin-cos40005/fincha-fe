@@ -25,6 +25,7 @@ jobs:
         env:
           BUILD_LOGS: ${{ steps.deploy.outputs.build_logs }}
           DEPLOY_LOGS: ${{ steps.deploy.outputs.deploy_logs }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         with:
           script: |
             const { BUILD_LOGS, DEPLOY_LOGS } = process.env

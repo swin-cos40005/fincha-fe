@@ -6,15 +6,7 @@ ingress:
       name: fincha-fe
     match:
       authority:
-        exact: ""
-      path:
-        prefix: /
-  - match:
-      authority:
-        exact: ${STARTER_DOMAIN}
-      path:
-        prefix: /
-name: fincha-staging
+        exact: "/"
 region: sgp
 services:
 - dockerfile_path: /Dockerfile
