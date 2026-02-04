@@ -1,9 +1,33 @@
-name: fincha-dev
-region: sgp
 features:
-  - buildpack-stack=ubuntu-22
+- buildpack-stack=ubuntu-22
+ingress:
+  rules:
+  - component:
+      name: fincha-fe
+    match:
+      authority:
+        exact: ""
+      path:
+        prefix: /
+  - match:
+      authority:
+        exact: ${STARTER_DOMAIN}
+      path:
+        prefix: /
+    redirect:
+      authority: staging.fincha.app
+      redirect_code: 302
+      scheme: https
+name: fincha-staging
+region: sgp
 services:
-  - name: web
-    http_port: 3000
-    instance_count: 1
-    instance_size_slug: apps-s-1vcpu-0.5gb
+- dockerfile_path: /Dockerfile
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: swin-cos40005/fincha-fe
+  http_port: 3000
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-0.5gb
+  name: fincha-fe
+  source_dir: /
