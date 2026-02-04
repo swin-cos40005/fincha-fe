@@ -24,6 +24,7 @@ export function MobileSidebar() {
                 </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-[300px]">
+                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                 <div className="h-full">
                     {/* Reuse Sidebar but force expanded state */}
                     <Sidebar
