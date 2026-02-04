@@ -14,10 +14,6 @@ ingress:
         exact: ${STARTER_DOMAIN}
       path:
         prefix: /
-    redirect:
-      authority: staging.fincha.app
-      redirect_code: 302
-      scheme: https
 name: fincha-staging
 region: sgp
 services:
