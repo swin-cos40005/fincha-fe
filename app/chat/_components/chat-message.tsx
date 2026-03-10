@@ -1,13 +1,22 @@
 'use client'
 
-import { IconGroq, IconUser } from '@/components/ui/icons'
+import Image from 'next/image'
+import { IconUser } from '@/components/ui/icons'
 import { cn } from '@/lib/utils'
 import { spinner } from './spinner'
-// import { CodeBlock } from '@/components/ui/codeblock'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import Markdown from 'react-markdown'
 import { Message } from '@/lib/types'
+
+function BotAvatar() {
+  return (
+    <>
+      <Image src="/logo-light.png" alt="Fincha" width={16} height={16} className="object-contain block dark:hidden" />
+      <Image src="/logo-dark.png" alt="Fincha" width={16} height={16} className="object-contain hidden dark:block" />
+    </>
+  )
+}
 
 // Different types of message bubbles.
 
@@ -33,8 +42,8 @@ export function BotMessage({
 }) {
   return (
     <div className={cn('group relative flex items-start md:-ml-12', className)}>
-      <div className="flex size-[24px] shrink-0 select-none items-center justify-center rounded-md border bg-[#f55036] text-primary-foreground shadow-sm">
-        <IconGroq />
+      <div className="flex size-[24px] shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm">
+        <BotAvatar />
       </div>
       <div className="ml-4 flex-1 space-y-2 overflow-hidden px-1">
         <Markdown
@@ -94,11 +103,11 @@ export function BotCard({
     <div className="group relative flex items-start md:-ml-12">
       <div
         className={cn(
-          'flex size-[24px] shrink-0 select-none items-center justify-center rounded-md border bg-[#f55036] text-primary-foreground shadow-sm',
+          'flex size-[24px] shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm',
           !showAvatar && 'invisible'
         )}
       >
-        <IconGroq />
+        <BotAvatar />
       </div>
       <div className="ml-4 flex-1 pl-2">
         <span>{message.content}</span>
@@ -122,8 +131,8 @@ export function SystemMessage({ message }: { message: Message }) {
 export function SpinnerMessage() {
   return (
     <div className="group relative flex items-start md:-ml-12">
-      <div className="flex size-[24px] shrink-0 select-none items-center justify-center rounded-md border bg-[#f55036] text-primary-foreground shadow-sm">
-        <IconGroq />
+      <div className="flex size-[24px] shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm">
+        <BotAvatar />
       </div>
       <div className="ml-4 h-[24px] flex flex-row items-center flex-1 space-y-2 overflow-hidden px-1">
         {spinner}
