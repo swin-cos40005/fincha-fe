@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, createContext, useContext, useEffect, useRef } from 'react'
+import { type ReactNode, createContext, useContext, useEffect, useState } from 'react'
 import { useStore } from 'zustand'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -17,17 +17,11 @@ export interface AuthStoreProviderProps {
 }
 
 export const AuthStoreProvider = ({ children }: AuthStoreProviderProps) => {
-  const storeRef = useRef<AuthStoreApi | null>(null)
+  const [store] = useState(() => createAuthStore())
   const router = useRouter()
   const supabase = createClient()
 
-  if (storeRef.current === null) {
-    storeRef.current = createAuthStore()
-  }
-
   useEffect(() => {
-    const store = storeRef.current
-    if (!store) return
     const { setUser, setLoading } = store.getState()
 
     const checkUser = async () => {
@@ -58,10 +52,10 @@ export const AuthStoreProvider = ({ children }: AuthStoreProviderProps) => {
     })
 
     return () => subscription.unsubscribe()
-  }, [router, supabase])
+  }, [router, store, supabase])
 
   return (
-    <AuthStoreContext.Provider value={storeRef.current}>
+    <AuthStoreContext.Provider value={store}>
       {children}
     </AuthStoreContext.Provider>
   )
@@ -81,8 +75,10 @@ export const useAuthStore = <T,>(selector: (store: AuthStore) => T): T => {
 export const useAuthActions = () => {
   const router = useRouter()
   const supabase = createClient()
+  const setIsSubmitting = useAuthStore((s) => s.setIsSubmitting)
 
   const signIn = async (email: string, password: string) => {
+    setIsSubmitting(true)
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -94,14 +90,18 @@ export const useAuthActions = () => {
       return {}
     } catch (error: any) {
       return { error: error.message || 'Sign in failed' }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, options?: { emailRedirectTo?: string }) => {
+    setIsSubmitting(true)
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: options?.emailRedirectTo ? { emailRedirectTo: options.emailRedirectTo } : undefined,
       })
       if (error) {
         return { error: error.message }
@@ -109,6 +109,8 @@ export const useAuthActions = () => {
       return {}
     } catch (error: any) {
       return { error: error.message || 'Sign up failed' }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -123,18 +125,20 @@ export const useAuthActions = () => {
     }
   }
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (options?: { redirectTo?: string }) => {
+    setIsSubmitting(true)
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: options?.redirectTo ?? `${window.location.origin}/auth/callback`,
         },
       })
       if (error) throw error
     } catch (error: any) {
       console.error('Google sign-in error:', error)
       toast.error(error.message || 'Error logging in with Google')
+      setIsSubmitting(false)
     }
   }
 
@@ -145,7 +149,8 @@ export const useAuthActions = () => {
 export const useAuth = () => {
   const user = useAuthStore((state) => state.user)
   const loading = useAuthStore((state) => state.loading)
+  const isSubmitting = useAuthStore((state) => state.isSubmitting)
   const { signIn, signUp, signOut, signInWithGoogle } = useAuthActions()
 
-  return { user, loading, signIn, signUp, signOut, signInWithGoogle }
+  return { user, loading, isSubmitting, signIn, signUp, signOut, signInWithGoogle }
 }

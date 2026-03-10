@@ -11,44 +11,22 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip'
 import { useEnterSubmit } from '@/lib/hooks/use-enter-submit'
-import { Message } from '@/lib/types'
-import { nanoid } from 'nanoid'
-import { submitUserMessage } from '@/lib/services/chat/actions'
+import { useChatStore } from '@/app/_providers/chat-store-provider'
 
-export function PromptForm({
-  input,
-  setInput,
-  setMessages,
-  onInteraction
-}: {
-  input: string
-  setInput: (value: string) => void
-  setMessages: (messages: (currentMessages: Message[]) => Message[]) => void
-  onInteraction?: () => void
-}) {
+export function PromptForm() {
+  const input = useChatStore((s) => s.input)
+  const setInput = useChatStore((s) => s.setInput)
+  const sendMessage = useChatStore((s) => s.sendMessage)
+  const isLoading = useChatStore((s) => s.isLoading)
+
   const { formRef, onKeyDown } = useEnterSubmit()
   const inputRef = React.useRef<HTMLTextAreaElement>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
 
-  const handleSubmit = async (value: string) => {
-    setMessages(prevMessages => [
-      ...prevMessages,
-      { id: nanoid(), role: 'user', content: value }
-    ])
-
-    const assistantText = await submitUserMessage(value)
-
-    setMessages(prevMessages => [
-      ...prevMessages,
-      { id: nanoid(), role: 'assistant', content: assistantText }
-    ])
-  }
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      // Check file type (PDF or TXT only)
       const validTypes = ['application/pdf', 'text/plain']
       if (!validTypes.includes(file.type)) {
         alert('Please select a PDF or TXT file')
@@ -67,28 +45,17 @@ export function PromptForm({
   return (
     <form
       ref={formRef}
-      onSubmit={async (e: any) => {
+      onSubmit={async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // Blur focus on mobile
         if (window.innerWidth < 600) {
-          e.target['message']?.blur()
+          (e.target as HTMLFormElement)['message']?.blur()
         }
 
         const value = input.trim()
-        setInput('')
         if (!value) return
 
-        // Trigger interaction callback
-        onInteraction?.()
-
-        console.log('value: ', value)
-        if (selectedFile) {
-          console.log('Selected file: ', selectedFile.name)
-          // Note: Backend processing not implemented yet
-        }
-
-        handleSubmit(value)
+        sendMessage(value)
       }}
     >
       <div className="relative flex max-h-60 w-full grow flex-col overflow-hidden bg-background px-8 sm:rounded-md sm:border sm:px-12">
@@ -134,7 +101,7 @@ export function PromptForm({
           />
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button type="submit" size="icon" disabled={input === ''}>
+              <Button type="submit" size="icon" disabled={input === '' || isLoading}>
                 <div className="rotate-180">
                   <IconArrowDown />
                 </div>
