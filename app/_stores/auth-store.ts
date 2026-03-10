@@ -4,11 +4,13 @@ import type { User } from '@supabase/supabase-js'
 export type AuthState = {
   user: User | null
   loading: boolean
+  isSubmitting: boolean
 }
 
 export type AuthActions = {
   setUser: (user: User | null) => void
   setLoading: (loading: boolean) => void
+  setIsSubmitting: (isSubmitting: boolean) => void
 }
 
 export type AuthStore = AuthState & AuthActions
@@ -16,6 +18,7 @@ export type AuthStore = AuthState & AuthActions
 export const defaultInitState: AuthState = {
   user: null,
   loading: true,
+  isSubmitting: false,
 }
 
 export const createAuthStore = (initState: AuthState = defaultInitState) => {
@@ -23,5 +26,6 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
     ...initState,
     setUser: (user) => set({ user }),
     setLoading: (loading) => set({ loading }),
+    setIsSubmitting: (isSubmitting) => set({ isSubmitting }),
   }))
 }

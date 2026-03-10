@@ -1,17 +1,15 @@
+'use client'
+
 import { Separator } from '@/components/ui/separator'
-import { Message } from '@/lib/types'
 import { BotMessage, UserMessage } from './chat-message'
+import { useChatStore } from '@/app/_providers/chat-store-provider'
 
-export interface ChatList {
-  messages: Message[]
-}
+export function ChatList() {
+  const messages = useChatStore((s) => s.messages)
 
-export function ChatList({ messages }: ChatList) {
   if (!messages.length) {
     return null
   }
-
-  console.log('messages: ', messages)
 
   return (
     <div className="relative mx-auto max-w-2xl px-4 pb-4">
@@ -19,9 +17,9 @@ export function ChatList({ messages }: ChatList) {
         <div key={message.id}>
           <div>
             {message.role === 'user' ? (
-              <UserMessage key={message.id} message={message} />
+              <UserMessage message={message} />
             ) : (
-              <BotMessage key={message.id} message={message} />
+              <BotMessage message={message} />
             )}
           </div>
           {index < messages.length - 1 && <Separator className="my-4" />}
