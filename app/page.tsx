@@ -1,3 +1,5 @@
+import { Homepage } from '@/app/_components/homepage'
+
 export default function HomePage() {
-  return <div>Home</div>
+  return <Homepage />
 }
