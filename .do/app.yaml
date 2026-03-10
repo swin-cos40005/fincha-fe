@@ -5,8 +5,8 @@ ingress:
   - component:
       name: fincha-fe
     match:
-      authority:
-        exact: "/"
+      path:
+        prefix: "/"
 region: sgp
 services:
 - dockerfile_path: /Dockerfile
