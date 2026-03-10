@@ -10,7 +10,8 @@
     "check": "pnpm type-check && pnpm lint",
     "preview": "next build && next start",
     "format:write": "prettier --write \"{app,lib,components}/**/*.{ts,tsx,mdx}\" --cache",
-    "format:check": "prettier --check \"{app,lib,components}/**/*.{ts,tsx,mdx}\" --cache"
+    "format:check": "prettier --check \"{app,lib,components}/**/*.{ts,tsx,mdx}\" --cache",
+    "postinstall": "git config --local push.autoSetupRemote true"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",
